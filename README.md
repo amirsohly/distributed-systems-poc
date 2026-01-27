@@ -18,11 +18,17 @@ Two main workflows are implemented:
 
 ## Structure
 distributed_poc/
+
 ├── cloud_server.py
+
 ├── edge_client.py
+
 ├── field_pb2.py
+
 ├── field_pb2_grpc.py
+
 ├── proto/
+
 │ └── field.proto
 
 ## How to Run
