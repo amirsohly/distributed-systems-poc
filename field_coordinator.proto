@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package field_coordinator;
+
+// ─────────────────────────────────────────────
+//  Service Definition
+//  Used exclusively between Fog (client) and Cloud (server).
+//  Edge nodes do not use gRPC — they lack the RAM and network
+//  stack required for HTTP/2.
+// ─────────────────────────────────────────────
+
+service FieldCoordinator {
+
+  // Fog → Cloud: send aggregated sensor readings from a zone
+  rpc SendSensorData (SensorReading) returns (Ack);
+
+  // Fog → Cloud: request immediate irrigation or fertigation
+  rpc TriggerIrrigation (ActuationCommand) returns (ActuationResponse);
+
+  // Fog → Cloud: request the latest AI-optimized plan for a zone
+  rpc GetOptimizationPlan (ZoneRequest) returns (IrrigationPlan);
+
+}
+
+// ─────────────────────────────────────────────
+//  Upward messages (Field → Cloud)
+// ─────────────────────────────────────────────
+
+message SensorReading {
+  string zone_id       = 1;  // e.g. "zone_a", "zone_b", "zone_c"
+  float  soil_moisture = 2;  // Volumetric Water Content (%)
+  float  temperature   = 3;  // Ambient temperature (°C)
+  float  humidity      = 4;  // Relative humidity (%)
+  float  soil_ph       = 5;  // Soil pH
+  float  soil_ec       = 6;  // Electrical Conductivity (mS/cm) — nutrient indicator
+  int64  timestamp     = 7;  // Unix timestamp (seconds)
+}
+
+message ZoneRequest {
+  string zone_id  = 1;
+  int64  timestamp = 2;
+}
+
+// ─────────────────────────────────────────────
+//  Downward messages (Cloud → Field)
+// ─────────────────────────────────────────────
+
+message ActuationCommand {
+  string zone_id          = 1;
+  string action_type      = 2;  // "IRRIGATE" or "FERTIGATE"
+  float  duration_minutes = 3;
+  float  nutrient_dose_ml = 4;  // 0.0 if action_type is "IRRIGATE" only
+}
+
+message IrrigationPlan {
+  string zone_id              = 1;
+  string scheduled_start      = 2;  // ISO 8601 datetime string
+  float  duration_minutes     = 3;
+  string action_type          = 4;  // "IRRIGATE" or "FERTIGATE"
+  float  nutrient_dose_ml     = 5;
+  string nutrient_mix         = 6;  // e.g. "N:P:K = 3:1:2"
+  string generated_at         = 7;  // when the AI produced this plan
+}
+
+// ─────────────────────────────────────────────
+//  Response messages
+// ─────────────────────────────────────────────
+
+message Ack {
+  string status  = 1;  // "OK" or "ERROR"
+  string message = 2;
+}
+
+message ActuationResponse {
+  bool   confirmed       = 1;
+  string scheduled_start = 2;  // "immediate" or ISO 8601
+  string message         = 3;
+}
